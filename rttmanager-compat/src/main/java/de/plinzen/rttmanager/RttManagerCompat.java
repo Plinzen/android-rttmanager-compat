@@ -516,6 +516,47 @@ public class RttManagerCompat {
          * Whether the secure RTT protocol was used for ranging.
          */
         public boolean secure;
+
+        /**
+         * {@hide}
+         */
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("bssid=").append(bssid).append(", burstNumber=").append(burstNumber)
+                    .append(", measurementFrameNumber=" + measurementFrameNumber)
+                    .append(", successMeasurementFrameNumber="
+                            + successMeasurementFrameNumber)
+                    .append(", frameNumberPerBurstPeer=" + frameNumberPerBurstPeer)
+                    .append(", status=" + status)
+                    .append(", requestType=" + requestType)
+                    .append(", measurementType=" + measurementType)
+                    .append(", retryAfterDuration=" + retryAfterDuration)
+                    .append(", ts=" + ts)
+                    .append(", rssi=" + rssi)
+                    .append(", rssi_spread=" + rssi_spread)
+                    .append(", rssiSpread=" + rssiSpread)
+                    .append(", tx_rate=" + tx_rate)
+                    .append(", txRate=" + txRate)
+                    .append(", rxRate=" + rxRate)
+                    .append(", rtt_ns=" + rtt_ns)
+                    .append(", rtt=" + rtt)
+                    .append(", rtt_sd_ns=" + rtt_sd_ns)
+                    .append(", rttStandardDeviation=" + rttStandardDeviation)
+                    .append(", rtt_spread_ns=" + rtt_spread_ns)
+                    .append(", rttSpread=" + rttSpread)
+                    .append(", distance_cm=" + distance_cm)
+                    .append(", distance=" + distance)
+                    .append(", distance_sd_cm=" + distance_sd_cm)
+                    .append(", distanceStandardDeviation=" + distanceStandardDeviation)
+                    .append(", distance_spread_cm=" + distance_spread_cm)
+                    .append(", distanceSpread=" + distanceSpread)
+                    .append(", burstDuration=" + burstDuration)
+                    .append(", negotiatedBurstNum=" + negotiatedBurstNum)
+                    .append(", LCI=" + LCI)
+                    .append(", LCR=" + LCR)
+                    .append(", secure=" + secure);
+            return sb.toString();
+        }
     }
 
     /**
