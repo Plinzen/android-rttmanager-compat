@@ -7,6 +7,7 @@ The RttManager allows to measure the Round Trip Time (RTT) of a data packet + AC
 
 ## Requirements
 
+* A rooted Android phone (app needs to be installed in sys/priv-app folder)
 * Min SDK 23 (Marshmallow)
 * Your smartphone supports the IEEE 802.11mc standard. (e.g. has Qualcomm Snapdragon 820 CPU)
 * Your AP support the IEEE 802.11mc standard.
@@ -36,3 +37,22 @@ public void startRanging(@NonNull final ScanResult wifiConfig,
     rttManagerCompat.startRanging(new RttManagerCompat.RttParams[]{params}, rttListener);
 }
 ```
+
+## Installation
+
+__Please notice that a rooted phone is required__
+
+Perform the following steps to install your app containing this SDK:
+
+* compile the app: `./gradlew clean assembleDebug`
+* copy the APK to the phone, e.g. `adb push <<path_to_apk>> /sdcard` (`adb push app/build/outputs/app-debug.apk /sdcard`)
+* Open a file manager app, which is capable to perform root operations, eg. `ES Filemanager`.
+* Copy the APK from `/sdcard` to `/system/priv-app`
+* (Optinal) Sometime it is necessary to check the permission of the copied APK. It should be executable by everyone.
+* Reboot the phone. The app should be installed and be available in the app launcher.
+
+### More details about the installation can be found here:
+
+* http://stackoverflow.com/questions/24296286/get-android-system-permissions-by-putting-app-in-system-app
+* http://stackoverflow.com/questions/19868138/aosp-privileged-vs-system-app
+* http://android.stackexchange.com/questions/27/how-do-i-properly-install-a-system-app-given-its-apk
