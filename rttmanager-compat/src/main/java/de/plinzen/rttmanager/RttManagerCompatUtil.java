@@ -1,5 +1,6 @@
 package de.plinzen.rttmanager;
 
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -9,11 +10,10 @@ import java.lang.reflect.Proxy;
 
 class RttManagerCompatUtil {
 
-
-
     static final String CLASS_RESPONDER_CALLBACK = "android.net.wifi.RttManager$ResponderCallback";
     static final String CLASS_RTT_LISTENER = "android.net.wifi.RttManager$RttListener";
     static final String CLASS_RTT_PARAMS = "android.net.wifi.RttManager$RttParams";
+    private static final String TAG = RttManagerCompatUtil.class.getSimpleName();
 
     static RttManagerCompat.Capabilities buildCapabilitiesFromNativeObject(
             @NonNull final Object nativeCapabilities) {
@@ -21,28 +21,6 @@ class RttManagerCompatUtil {
         final RttManagerCompat.Capabilities capabilities = new RttManagerCompat.Capabilities();
         capabilities.supportedType = readInt(nativeCapabilitiesClass, nativeCapabilities, "supportedType");
         capabilities.supportedPeerType = readInt(nativeCapabilitiesClass, nativeCapabilities, "supportedPeerType");
-        return capabilities;
-    }
-
-    static RttManagerCompat.RttCapabilities buildRttCapabilitiesFromNativeObject(final Object nativeCapabilities) {
-        if (nativeCapabilities == null) {
-            return null;
-        }
-        final Class<?> nativeCapabilitiesClass = nativeCapabilities.getClass();
-        final RttManagerCompat.RttCapabilities capabilities = new RttManagerCompat.RttCapabilities();
-
-        capabilities.supportedType = readBoolean(nativeCapabilitiesClass, nativeCapabilities, "supportedType");
-        capabilities.supportedPeerType = readBoolean(nativeCapabilitiesClass, nativeCapabilities, "supportedPeerType");
-        capabilities.oneSidedRttSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities,
-                "oneSidedRttSupported");
-        capabilities.twoSided11McRttSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities,
-                "twoSided11McRttSupported");
-        capabilities.lciSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities, "lciSupported");
-        capabilities.lcrSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities, "lcrSupported");
-        capabilities.preambleSupported = readInt(nativeCapabilitiesClass, nativeCapabilities, "preambleSupported");
-        capabilities.bwSupported = readInt(nativeCapabilitiesClass, nativeCapabilities, "bwSupported");
-        capabilities.responderSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities,
-                "responderSupported");
         return capabilities;
     }
 
@@ -84,29 +62,34 @@ class RttManagerCompatUtil {
         return nativeParams;
     }
 
-    static RttManagerCompat.RttListenerWrapper wrapRttListener(
-            @Nullable final RttManagerCompat.RttListener rttListener) throws
-            ClassNotFoundException, IllegalAccessException, InstantiationException {
-        if (rttListener == null) {
+    static RttManagerCompat.RttCapabilities buildRttCapabilitiesFromNativeObject(final Object nativeCapabilities) {
+        if (nativeCapabilities == null) {
             return null;
         }
-        final Class<?> nativeParamClass = Class.forName(CLASS_RTT_LISTENER);
-        return (RttManagerCompat.RttListenerWrapper) Proxy
-                .newProxyInstance(RttManagerCompat.RttListenerWrapper.class.getClassLoader(), new
-                        Class[]{RttManagerCompat
-                        .RttListenerWrapper.class, nativeParamClass}, (proxy,
-                        method, args) -> {
-                    if ("onSuccess".equals(method.getName())) {
-                        rttListener.onSuccess(buildRttResultFromNativeObjects((Object[]) args[0]));
-                    } else if ("onFailure".equals(method.getName())) {
-                        rttListener.onFailure((int) args[0], (String) args[1]);
-                    } else if ("onAborted".equals(method.getName())) {
-                        rttListener.onAborted();
-                    } else if ("getRttListenerCompat".equals(method.getName())) {
-                        return rttListener;
-                    }
-                    return null;
-                });
+        final Class<?> nativeCapabilitiesClass = nativeCapabilities.getClass();
+        final RttManagerCompat.RttCapabilities capabilities = new RttManagerCompat.RttCapabilities();
+
+        capabilities.supportedType = readBoolean(nativeCapabilitiesClass, nativeCapabilities, "supportedType");
+        capabilities.supportedPeerType = readBoolean(nativeCapabilitiesClass, nativeCapabilities, "supportedPeerType");
+        capabilities.oneSidedRttSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities,
+                "oneSidedRttSupported");
+        capabilities.twoSided11McRttSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities,
+                "twoSided11McRttSupported");
+        capabilities.lciSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities, "lciSupported");
+        capabilities.lcrSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities, "lcrSupported");
+        capabilities.preambleSupported = readInt(nativeCapabilitiesClass, nativeCapabilities, "preambleSupported");
+        capabilities.bwSupported = readInt(nativeCapabilitiesClass, nativeCapabilities, "bwSupported");
+        capabilities.responderSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities,
+                "responderSupported");
+
+        // secureRttSupported and mcVersion were introduced with Android N
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            capabilities.secureRttSupported = readBoolean(nativeCapabilitiesClass, nativeCapabilities,
+                    "secureRttSupported");
+            capabilities.mcVersion = readInt(nativeCapabilitiesClass, nativeCapabilities, "mcVersion");
+        }
+
+        return capabilities;
     }
 
     static RttManagerCompat.ResponderCallbackWrapper wrapResponderCallback(
@@ -116,6 +99,8 @@ class RttManagerCompatUtil {
             return null;
         }
         final Class<?> nativeParamClass = Class.forName(CLASS_RESPONDER_CALLBACK);
+        // TODO This does not work since ResponderCallback is an abstract class an no interface. Proxy only works on
+        // interfaces.
         return (RttManagerCompat.ResponderCallbackWrapper) Proxy
                 .newProxyInstance(RttManagerCompat.ResponderCallbackWrapper.class.getClassLoader(), new
                         Class[]{RttManagerCompat.ResponderCallbackWrapper.class, nativeParamClass}, (proxy,
@@ -131,86 +116,29 @@ class RttManagerCompatUtil {
                 });
     }
 
-    private static void setInt(@NonNull final Class<?> nativeParamClass, @NonNull final Object nativeObject,
-            @NonNull final String fieldName, @NonNull final int value) {
-        try {
-            nativeParamClass.getDeclaredField(fieldName).setInt(nativeObject, value);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            Log.e(TAG, e.getMessage(), e);
+    static RttManagerCompat.RttListenerWrapper wrapRttListener(
+            @Nullable final RttManagerCompat.RttListener rttListener) throws
+            ClassNotFoundException, IllegalAccessException, InstantiationException {
+        if (rttListener == null) {
+            return null;
         }
-    }
-    
-    private static final String TAG = RttManagerCompatUtil.class.getSimpleName();
-
-    private static void setObject(@NonNull final Class<?> nativeParamClass, @NonNull final Object nativeObject,
-            @NonNull final String fieldName, @NonNull final Object value) {
-        try {
-            nativeParamClass.getDeclaredField(fieldName).set(nativeObject, value);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-    }
-
-
-    private static void setBoolean(@NonNull final Class<?> nativeParamClass, @NonNull final Object nativeObject,
-            @NonNull final String fieldName, @NonNull final boolean value) {
-        try {
-            nativeParamClass.getDeclaredField(fieldName).setBoolean(nativeObject, value);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-    }
-
-
-    private static boolean readBoolean(@NonNull final Class<?> nativeClass, @NonNull final Object nativeObject,
-            @NonNull final String fieldName) {
-        try {
-            return nativeClass.getDeclaredField(fieldName).getBoolean(nativeObject);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-        return false;
-    }
-
-    private static int readInt(@NonNull final Class<?> nativeClass, @NonNull final Object nativeObject,
-            @NonNull final String fieldName) {
-        try {
-            return nativeClass.getDeclaredField(fieldName).getInt(nativeObject);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-        return 0;
-    }
-
-    private static long readLong(@NonNull final Class<?> nativeClass, @NonNull final Object nativeObject,
-            @NonNull final String fieldName) {
-        try {
-            return nativeClass.getDeclaredField(fieldName).getLong(nativeObject);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-        return 0;
-    }
-
-    private static byte readByte(@NonNull final Class<?> nativeClass, @NonNull final Object nativeObject,
-            @NonNull final String fieldName) {
-        try {
-            return nativeClass.getDeclaredField(fieldName).getByte(nativeObject);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-        return 0;
-    }
-
-
-    private static <T> T readObject(@NonNull final Class<?> nativeClass, @NonNull final Object nativeObject,
-            @NonNull final String fieldName) {
-        try {
-            return (T) nativeClass.getDeclaredField(fieldName).get(nativeObject);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-        return null;
+        final Class<?> nativeParamClass = Class.forName(CLASS_RTT_LISTENER);
+        return (RttManagerCompat.RttListenerWrapper) Proxy
+                .newProxyInstance(RttManagerCompat.RttListenerWrapper.class.getClassLoader(), new
+                        Class[]{RttManagerCompat
+                        .RttListenerWrapper.class, nativeParamClass}, (proxy,
+                        method, args) -> {
+                    if ("onSuccess".equals(method.getName())) {
+                        rttListener.onSuccess(buildRttResultFromNativeObjects(args[0]));
+                    } else if ("onFailure".equals(method.getName())) {
+                        rttListener.onFailure((int) args[0], (String) args[1]);
+                    } else if ("onAborted".equals(method.getName())) {
+                        rttListener.onAborted();
+                    } else if ("getRttListenerCompat".equals(method.getName())) {
+                        return rttListener;
+                    }
+                    return null;
+                });
     }
 
     private static RttManagerCompat.ResponderConfig buildResponderConfigFromNativeObjects(
@@ -227,19 +155,6 @@ class RttManagerCompatUtil {
         config.channelWidth = readInt(nativeResultClass, nativeResult, "channelWidth");
         config.preamble = readInt(nativeResultClass, nativeResult, "preamble");
         return config;
-    }
-
-
-    private static RttManagerCompat.WifiInformationElement buildWifiInformationElementFromNativeObjects(
-            @Nullable final Object nativeResult) {
-        if (nativeResult == null) {
-            return null;
-        }
-        final Class<?> wifiInformationClass = nativeResult.getClass();
-        final RttManagerCompat.WifiInformationElement wifiInformation = new RttManagerCompat.WifiInformationElement();
-        wifiInformation.id = readByte(wifiInformationClass, nativeResult, "id");
-        wifiInformation.data = readObject(wifiInformationClass, nativeResult, "data");
-        return wifiInformation;
     }
 
     private static RttManagerCompat.RttResult[] buildRttResultFromNativeObjects(
@@ -283,5 +198,94 @@ class RttManagerCompatUtil {
             results[i] = result;
         }
         return results;
+    }
+
+    private static RttManagerCompat.WifiInformationElement buildWifiInformationElementFromNativeObjects(
+            @Nullable final Object nativeResult) {
+        if (nativeResult == null) {
+            return null;
+        }
+        final Class<?> wifiInformationClass = nativeResult.getClass();
+        final RttManagerCompat.WifiInformationElement wifiInformation = new RttManagerCompat.WifiInformationElement();
+        wifiInformation.id = readByte(wifiInformationClass, nativeResult, "id");
+        wifiInformation.data = readObject(wifiInformationClass, nativeResult, "data");
+        return wifiInformation;
+    }
+
+    private static boolean readBoolean(@NonNull final Class<?> nativeClass, @NonNull final Object nativeObject,
+            @NonNull final String fieldName) {
+        try {
+            return nativeClass.getDeclaredField(fieldName).getBoolean(nativeObject);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+        return false;
+    }
+
+    private static byte readByte(@NonNull final Class<?> nativeClass, @NonNull final Object nativeObject,
+            @NonNull final String fieldName) {
+        try {
+            return nativeClass.getDeclaredField(fieldName).getByte(nativeObject);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+        return 0;
+    }
+
+    private static int readInt(@NonNull final Class<?> nativeClass, @NonNull final Object nativeObject,
+            @NonNull final String fieldName) {
+        try {
+            return nativeClass.getDeclaredField(fieldName).getInt(nativeObject);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+        return 0;
+    }
+
+    private static long readLong(@NonNull final Class<?> nativeClass, @NonNull final Object nativeObject,
+            @NonNull final String fieldName) {
+        try {
+            return nativeClass.getDeclaredField(fieldName).getLong(nativeObject);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+        return 0;
+    }
+
+    private static <T> T readObject(@NonNull final Class<?> nativeClass, @NonNull final Object nativeObject,
+            @NonNull final String fieldName) {
+        try {
+            return (T) nativeClass.getDeclaredField(fieldName).get(nativeObject);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+        return null;
+    }
+
+    private static void setBoolean(@NonNull final Class<?> nativeParamClass, @NonNull final Object nativeObject,
+            @NonNull final String fieldName, @NonNull final boolean value) {
+        try {
+            nativeParamClass.getDeclaredField(fieldName).setBoolean(nativeObject, value);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+    }
+
+    private static void setInt(@NonNull final Class<?> nativeParamClass, @NonNull final Object nativeObject,
+            @NonNull final String fieldName, @NonNull final int value) {
+        try {
+            nativeParamClass.getDeclaredField(fieldName).setInt(nativeObject, value);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+    }
+
+    private static void setObject(@NonNull final Class<?> nativeParamClass, @NonNull final Object nativeObject,
+            @NonNull final String fieldName, @NonNull final Object value) {
+        try {
+            nativeParamClass.getDeclaredField(fieldName).set(nativeObject, value);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
     }
 }
