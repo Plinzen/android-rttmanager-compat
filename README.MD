@@ -1,6 +1,6 @@
 # RttManager Compat
 
-## DEPRECATED: The purpose of this library was to make use of the internal RttManager API up to Android Oreo (requires ROOT). With Android P this API is public available in the SDK now.
+## DEPRECATED: The purpose of this library was to make use of the internal RttManager API up to Android Oreo (requires ROOT). With Android P this API is public available in the SDK now and is NOT reflected in this library.
 
 This library wraps the currently only as `@SystemAPI` available `android.net.wifi.RttManager` class.
 
